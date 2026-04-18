@@ -7,16 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 class Event extends Model {
     use HasFactory;
 
-    // Tell Laravel that the primary key is 'event_id'
     protected $primaryKey = 'event_id';
 
     protected $fillable = [
-        'event_name', 'location', 'event_date', 'participants',
-        'sport_type', 'description', 'max_participants', 'status', 'created_by'
+        'event_name', 'location', 'event_date', 'event_end_date',
+        'participants', 'sport_type', 'description', 'max_participants', 'status', 'created_by'
     ];
 
     protected function casts(): array {
-        return ['event_date' => 'datetime'];
+        return [
+            'event_date'     => 'datetime',
+            'event_end_date' => 'datetime',
+        ];
+    }
+
+    public function getRouteKeyName()
+    {
+        return 'event_id';
     }
 
     public function registrations() {

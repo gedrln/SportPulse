@@ -6,40 +6,33 @@ use Illuminate\Http\Request;
 
 class EventController extends Controller {
     
-    // Display all events with sport type filtering
     public function index(Request $request) {
         $query = Event::query();
         
-        // Filter by sport type if selected
-        if ($request->has('sport') && $request->sport != '') {
+        if ($request->filled('sport')) {
             $query->where('sport_type', $request->sport);
         }
         
-        // Filter by status
-        if ($request->has('status') && $request->status != '') {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
-        } else {
-            $query->where('status', 'upcoming');
         }
         
         $events = $query->orderBy('event_date')->paginate(9);
-        
-        // Get all unique sport types for filter dropdown
         $sports = Event::distinct()->pluck('sport_type')->filter()->values();
         
         return view('events.index', compact('events', 'sports'));
     }
 
     public function show(Event $event) {
-    $event->load('registrations');
-    $alreadyRegistered = false;
-    if (auth()->check() && !auth()->user()->isAdmin()) {
-        $alreadyRegistered = $event->registrations()
-            ->where('user_name', auth()->user()->username)
-            ->exists();
+        $event->load('registrations');
+        $alreadyRegistered = false;
+        if (auth()->check() && !auth()->user()->isAdmin()) {
+            $alreadyRegistered = $event->registrations()
+                ->where('user_name', auth()->user()->username)
+                ->exists();
+        }
+        return view('events.show', compact('event', 'alreadyRegistered'));
     }
-    return view('events.show', compact('event', 'alreadyRegistered'));
-}
 
     public function create() {
         return view('events.create');
@@ -47,13 +40,14 @@ class EventController extends Controller {
 
     public function store(Request $request) {
         $validated = $request->validate([
-            'event_name' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
-            'event_date' => 'required|date|after:now',
+            'event_name'       => 'required|string|max:255',
+            'location'         => 'required|string|max:255',
+            'event_date'       => 'required|date|after:now',
+            'event_end_date'   => 'nullable|date|after:event_date',
             'max_participants' => 'required|integer|min:1',
-            'sport_type' => 'required|string',
-            'description' => 'nullable|string',
-            'status' => 'required|in:upcoming,ongoing,completed,cancelled',
+            'sport_type'       => 'required|string',
+            'description'      => 'nullable|string',
+            'status'           => 'required|in:upcoming,ongoing,completed,cancelled',
         ]);
         
         $validated['participants'] = 0;
@@ -71,13 +65,14 @@ class EventController extends Controller {
 
     public function update(Request $request, Event $event) {
         $validated = $request->validate([
-            'event_name' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
-            'event_date' => 'required|date',
+            'event_name'       => 'required|string|max:255',
+            'location'         => 'required|string|max:255',
+            'event_date'       => 'required|date',
+            'event_end_date'   => 'nullable|date|after:event_date',
             'max_participants' => 'required|integer|min:1',
-            'sport_type' => 'required|string',
-            'description' => 'nullable|string',
-            'status' => 'required|in:upcoming,ongoing,completed,cancelled',
+            'sport_type'       => 'required|string',
+            'description'      => 'nullable|string',
+            'status'           => 'required|in:upcoming,ongoing,completed,cancelled',
         ]);
         
         $event->update($validated);

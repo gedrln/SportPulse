@@ -2,121 +2,434 @@
 @section('title', 'Events')
 
 @section('content')
-<div class="card">
-    <div class="card-header bg-white">
-        <div class="d-flex justify-content-between align-items-center flex-wrap">
-            <h5 class="fw-bold mb-0"><i class="bi bi-calendar-event text-primary me-2"></i>Sports Events</h5>
-            
-            <!-- Filter by Sport -->
-            <form method="GET" action="{{ route('events.index') }}" class="d-flex gap-2">
-                <select name="sport" class="form-select form-select-sm" style="width: 150px;">
-                    <option value="">All Sports</option>
-                    @foreach($sports as $sport)
-                        <option value="{{ $sport }}" {{ request('sport') == $sport ? 'selected' : '' }}>
-                            {{ $sport }}
-                        </option>
-                    @endforeach
-                </select>
-                
-                <select name="status" class="form-select form-select-sm" style="width: 120px;">
-                    <option value="upcoming" {{ request('status') == 'upcoming' ? 'selected' : '' }}>Upcoming</option>
-                    <option value="ongoing" {{ request('status') == 'ongoing' ? 'selected' : '' }}>Ongoing</option>
-                    <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
-                </select>
-                
-                <button type="submit" class="btn btn-sm btn-primary">Filter</button>
-                <a href="{{ route('events.index') }}" class="btn btn-sm btn-secondary">Reset</a>
-            </form>
-            
-            @auth
-                @if(auth()->user()->isAdmin())
-                    <a href="{{ route('events.create') }}" class="btn btn-primary-custom btn-sm">+ Add Event</a>
-                @endif
-            @endauth
-        </div>
-    </div>
-    
-    <div class="card-body">
-        @guest
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>
-                Browse as Guest. <a href="/login">Login</a> or <a href="/register">Register</a> to join events!
-            </div>
-        @endguest
 
-        @if($events->count() > 0)
-            <div class="row g-4">
-                @foreach($events as $event)
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <h5 class="fw-bold text-primary">{{ $event->event_name }}</h5>
-                                    <span class="badge bg-{{ $event->status == 'upcoming' ? 'primary' : ($event->status == 'ongoing' ? 'warning' : 'secondary') }}">
-                                        {{ ucfirst($event->status) }}
-                                    </span>
-                                </div>
-                                
-                                <p class="text-muted small mt-2">
-                                    <i class="bi bi-trophy"></i> {{ $event->sport_type ?? 'General' }}<br>
-                                    <i class="bi bi-geo-alt"></i> {{ $event->location }}<br>
-                                    <i class="bi bi-calendar3"></i> {{ $event->event_date->format('M d, Y h:i A') }}
-                                </p>
-                                
-                                <hr>
-                                
-                                <div class="mb-2">
-                                    <div class="d-flex justify-content-between">
-                                        <span><i class="bi bi-people"></i> Participants</span>
-                                        <span class="fw-bold">{{ $event->participants }}/{{ $event->max_participants }}</span>
-                                    </div>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-success" style="width: {{ $event->max_participants > 0 ? ($event->participants / $event->max_participants) * 100 : 0 }}%"></div>
-                                    </div>
-                                </div>
-                                
-                                <div class="d-grid gap-2 mt-3">
-                                    <a href="{{ route('events.show', $event) }}" class="btn btn-outline-primary btn-sm">
-                                        <i class="bi bi-eye"></i> View Details
-                                    </a>
-                                    
-                                    @auth
-                                        @if(!auth()->user()->isAdmin())
-                                            @php
-                                                $isRegistered = $event->registrations()->where('user_name', auth()->user()->username)->exists();
-                                            @endphp
-                                            @if($isRegistered)
-                                                <button class="btn btn-success btn-sm" disabled>
-                                                    <i class="bi bi-check-circle"></i> Already Registered
-                                                </button>
-                                            @elseif($event->isFull())
-                                                <button class="btn btn-secondary btn-sm" disabled>
-                                                    <i class="bi bi-x-circle"></i> Event Full
-                                                </button>
-                                            @elseif($event->status == 'upcoming')
-                                                <a href="{{ route('registrations.create') }}?event_id={{ $event->id }}" class="btn btn-primary-custom btn-sm">
-                                                    <i class="bi bi-person-plus"></i> Register Now
-                                                </a>
-                                            @endif
-                                        @endif
-                                    @endauth
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-            
-            <div class="mt-4">
-                {{ $events->links() }}
-            </div>
-        @else
-            <div class="text-center py-5">
-                <i class="bi bi-calendar-x display-1 text-muted"></i>
-                <h4 class="text-muted mt-3">No events found</h4>
-                <p class="text-muted">Try a different filter or check back later.</p>
-            </div>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Bebas+Neue&display=swap');
+
+    .sp-events { font-family: 'DM Sans', sans-serif; }
+
+    /* Page Header */
+    .sp-page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(249,115,22,0.2);
+    }
+    .sp-page-title {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2.4rem;
+        color: #f1f5f9;
+        letter-spacing: 2px;
+        line-height: 1;
+    }
+    .sp-page-title span { color: #f97316; }
+    .sp-page-sub { color: #64748b; font-size: 0.8rem; margin-top: 4px; }
+
+    /* Filter Bar */
+    .sp-filter-bar {
+        background: #1e293b;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 14px;
+        padding: 16px 20px;
+        margin-bottom: 28px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .sp-filter-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-right: 4px;
+    }
+    .sp-filter-select {
+        background: #0f172a;
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #cbd5e1;
+        font-size: 0.82rem;
+        padding: 8px 14px;
+        border-radius: 10px;
+        font-family: 'DM Sans', sans-serif;
+        outline: none;
+        transition: border-color 0.2s;
+        min-width: 140px;
+    }
+    .sp-filter-select:focus { border-color: rgba(249,115,22,0.5); }
+    .sp-filter-btn {
+        background: #f97316;
+        border: none;
+        color: white;
+        font-size: 0.82rem;
+        padding: 8px 20px;
+        border-radius: 10px;
+        font-family: 'DM Sans', sans-serif;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s;
+    }
+    .sp-filter-btn:hover { background: #ea580c; }
+    .sp-reset-btn {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #94a3b8;
+        font-size: 0.82rem;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-family: 'DM Sans', sans-serif;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background 0.2s;
+        display: inline-block;
+    }
+    .sp-reset-btn:hover { background: rgba(255,255,255,0.1); color: #cbd5e1; }
+
+    /* Events Grid */
+    .sp-events-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    /* Event Card */
+    .sp-event-card {
+        background: #1e293b;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 16px;
+        overflow: hidden;
+        transition: transform 0.2s, border-color 0.2s;
+        position: relative;
+    }
+    .sp-event-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(249,115,22,0.3);
+    }
+    .sp-event-card-accent {
+        height: 4px;
+        background: linear-gradient(90deg, #f97316, #ea580c);
+    }
+    .sp-event-card-accent.ongoing { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .sp-event-card-accent.completed { background: linear-gradient(90deg, #64748b, #475569); }
+    .sp-event-card-accent.full { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+    .sp-event-card-body { padding: 20px; }
+
+    /* Status Badge */
+    .sp-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        margin-bottom: 12px;
+    }
+    .sp-status-badge.upcoming  { background: rgba(249,115,22,0.15); color: #f97316; border: 1px solid rgba(249,115,22,0.3); }
+    .sp-status-badge.ongoing   { background: rgba(34,197,94,0.12);  color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+    .sp-status-badge.completed { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.3); }
+    .sp-status-badge::before {
+        content: '';
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        display: inline-block;
+    }
+
+    .sp-event-name {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.5rem;
+        color: #f1f5f9;
+        letter-spacing: 1px;
+        line-height: 1.1;
+        margin-bottom: 14px;
+    }
+
+    /* Meta Info */
+    .sp-event-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .sp-meta-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #64748b; }
+    .sp-meta-row i { color: #475569; font-size: 0.82rem; width: 14px; }
+    .sp-meta-row span { color: #94a3b8; }
+
+    /* Participants bar */
+    .sp-participants {
+        margin-bottom: 18px;
+    }
+    .sp-participants-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.72rem;
+        color: #64748b;
+        margin-bottom: 6px;
+        font-weight: 500;
+    }
+    .sp-participants-label span { color: #94a3b8; }
+    .sp-progress-track {
+        height: 5px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .sp-progress-fill {
+        height: 100%;
+        border-radius: 10px;
+        background: linear-gradient(90deg, #f97316, #fb923c);
+        transition: width 0.5s ease;
+    }
+    .sp-progress-fill.full { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .sp-progress-fill.safe { background: linear-gradient(90deg, #22c55e, #4ade80); }
+
+    /* Action Buttons */
+    .sp-card-actions { display: flex; flex-direction: column; gap: 8px; }
+    .sp-btn-view {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 9px 0;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        font-family: 'DM Sans', sans-serif;
+        text-decoration: none;
+        transition: all 0.2s;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #cbd5e1;
+    }
+    .sp-btn-view:hover { background: rgba(255,255,255,0.1); color: #f1f5f9; }
+    .sp-btn-register {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 9px 0;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        font-family: 'DM Sans', sans-serif;
+        text-decoration: none;
+        transition: all 0.2s;
+        background: #f97316;
+        border: none;
+        color: white;
+        cursor: pointer;
+    }
+    .sp-btn-register:hover { background: #ea580c; color: white; }
+    .sp-btn-registered {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 9px 0;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: rgba(34,197,94,0.1);
+        border: 1px solid rgba(34,197,94,0.3);
+        color: #4ade80;
+        cursor: default;
+    }
+    .sp-btn-full {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 9px 0;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: rgba(239,68,68,0.08);
+        border: 1px solid rgba(239,68,68,0.2);
+        color: #f87171;
+        cursor: not-allowed;
+    }
+
+    /* Sport type chip */
+    .sp-sport-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(249,115,22,0.08);
+        border: 1px solid rgba(249,115,22,0.15);
+        color: #f97316;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 3px 9px;
+        border-radius: 6px;
+        margin-bottom: 10px;
+    }
+
+    /* Empty state */
+    .sp-empty-state {
+        grid-column: span 3;
+        text-align: center;
+        padding: 60px 20px;
+        color: #475569;
+    }
+    .sp-empty-icon { font-size: 3rem; display: block; margin-bottom: 12px; }
+    .sp-empty-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: #64748b; letter-spacing: 1px; }
+
+    /* Admin add event btn */
+    .sp-add-btn {
+        background: #f97316;
+        border: none;
+        color: white;
+        font-size: 0.82rem;
+        padding: 10px 22px;
+        border-radius: 10px;
+        font-family: 'DM Sans', sans-serif;
+        cursor: pointer;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: background 0.2s;
+    }
+    .sp-add-btn:hover { background: #ea580c; color: white; }
+
+    @media (max-width: 900px) {
+        .sp-events-grid { grid-template-columns: repeat(2, 1fr); }
+        .sp-empty-state { grid-column: span 2; }
+    }
+    @media (max-width: 600px) {
+        .sp-events-grid { grid-template-columns: 1fr; }
+        .sp-empty-state { grid-column: span 1; }
+        .sp-page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    }
+</style>
+
+<div class="sp-events">
+
+    {{-- Page Header --}}
+    <div class="sp-page-header">
+        <div>
+            <div class="sp-page-title">Sports <span>Events</span></div>
+            <div class="sp-page-sub">{{ $events->count() }} event{{ $events->count() != 1 ? 's' : '' }} found</div>
+        </div>
+        @if(auth()->user()->isAdmin())
+            <a href="{{ route('events.create') }}" class="sp-add-btn">
+                <i class="bi bi-plus-lg"></i> Add Event
+            </a>
         @endif
     </div>
+
+    {{-- Filter Bar --}}
+    <form method="GET" action="{{ route('events.index') }}">
+        <div class="sp-filter-bar">
+            <span class="sp-filter-label">Filter</span>
+            <select name="sport_type" class="sp-filter-select">
+                <option value="">All Sports</option>
+                @foreach($sportTypes ?? [] as $sport)
+                    <option value="{{ $sport }}" {{ request('sport_type') == $sport ? 'selected' : '' }}>{{ $sport }}</option>
+                @endforeach
+            </select>
+            <select name="status" class="sp-filter-select">
+                <option value="">All Status</option>
+                <option value="upcoming"  {{ request('status') == 'upcoming'  ? 'selected' : '' }}>Upcoming</option>
+                <option value="ongoing"   {{ request('status') == 'ongoing'   ? 'selected' : '' }}>Ongoing</option>
+                <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
+            </select>
+            <button type="submit" class="sp-filter-btn"><i class="bi bi-funnel-fill me-1"></i>Filter</button>
+            <a href="{{ route('events.index') }}" class="sp-reset-btn"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</a>
+        </div>
+    </form>
+
+    {{-- Events Grid --}}
+    <div class="sp-events-grid">
+        @forelse($events as $event)
+            @php
+                $isFull = $event->participants >= $event->max_participants;
+                $fillPct = $event->max_participants > 0 ? min(100, round(($event->participants / $event->max_participants) * 100)) : 0;
+                $fillClass = $fillPct >= 100 ? 'full' : ($fillPct < 60 ? 'safe' : '');
+                $accentClass = $event->status == 'ongoing' ? 'ongoing' : ($event->status == 'completed' ? 'completed' : ($isFull ? 'full' : ''));
+
+                $userRegistered = false;
+                if(auth()->check() && !auth()->user()->isAdmin()) {
+                    $userRegistered = $event->registrations()
+                        ->where('user_name', auth()->user()->username)
+                        ->whereIn('status', ['pending','approved'])
+                        ->exists();
+                }
+            @endphp
+            <div class="sp-event-card">
+                <div class="sp-event-card-accent {{ $accentClass }}"></div>
+                <div class="sp-event-card-body">
+                    <span class="sp-status-badge {{ $event->status }}">{{ ucfirst($event->status) }}</span>
+                    @if($event->sport_type)
+                        <div class="sp-sport-chip"><i class="bi bi-trophy-fill" style="font-size:10px"></i> {{ $event->sport_type }}</div>
+                    @endif
+                    <div class="sp-event-name">{{ $event->event_name }}</div>
+
+                    <div class="sp-event-meta">
+                        <div class="sp-meta-row">
+                            <i class="bi bi-geo-alt-fill"></i>
+                            <span>{{ $event->location }}</span>
+                        </div>
+                        <div class="sp-meta-row">
+                            <i class="bi bi-calendar3"></i>
+                            <span>
+                                {{ $event->event_date->format('M d, Y g:i A') }}
+                                @if($event->event_end_date)
+                                    — {{ $event->event_end_date->format('M d, Y') }}
+                                @endif
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="sp-participants">
+                        <div class="sp-participants-label">
+                            <span><i class="bi bi-people-fill me-1"></i>Participants</span>
+                            <span>{{ $event->participants }}/{{ $event->max_participants }}</span>
+                        </div>
+                        <div class="sp-progress-track">
+                            <div class="sp-progress-fill {{ $fillClass }}" style="width: {{ $fillPct }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="sp-card-actions">
+                        <a href="{{ route('events.show', $event) }}" class="sp-btn-view">
+                            <i class="bi bi-eye"></i> View Details
+                        </a>
+                        @auth
+                            @if(!auth()->user()->isAdmin())
+                                @if($userRegistered)
+                                    <div class="sp-btn-registered">
+                                        <i class="bi bi-check-circle-fill"></i> Already Registered
+                                    </div>
+                                @elseif($isFull || $event->status == 'completed')
+                                    <div class="sp-btn-full">
+                                        <i class="bi bi-slash-circle"></i> {{ $isFull ? 'Event Full' : 'Closed' }}
+                                    </div>
+                                @elseif($event->status == 'upcoming' || $event->status == 'ongoing')
+                                    <a href="{{ route('registrations.create') }}?event_id={{ $event->event_id }}" class="sp-btn-register">
+                                        <i class="bi bi-person-plus-fill"></i> Register Now
+                                    </a>
+                                @endif
+                            @else
+                                <a href="{{ route('events.edit', $event) }}" class="sp-btn-view">
+                                    <i class="bi bi-pencil-fill"></i> Edit Event
+                                </a>
+                            @endif
+                        @endauth
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div class="sp-empty-state">
+                <span class="sp-empty-icon">🏟️</span>
+                <div class="sp-empty-title">No Events Found</div>
+                <p style="color:#475569; font-size:0.82rem; margin-top:8px;">Try adjusting your filters or check back later.</p>
+            </div>
+        @endforelse
+    </div>
+
 </div>
 @endsection

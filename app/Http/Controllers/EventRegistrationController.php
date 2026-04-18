@@ -10,24 +10,28 @@ class EventRegistrationController extends Controller {
     
     public function index() {
         if (auth()->user()->isAdmin()) {
-            $registrations = EventRegistration::with(['user', 'event'])->latest()->paginate(15);
+            $pending   = EventRegistration::with(['user', 'event'])->where('status', 'pending')->latest()->get();
+            $approved  = EventRegistration::with(['user', 'event'])->where('status', 'approved')->latest()->get();
+            $rejected  = collect(); // admin sees rejected inside Archived tab
+            $cancelled = EventRegistration::with(['user', 'event'])->where('status', 'cancelled')->latest()->get();
+            $archived  = EventRegistration::with(['user', 'event'])->whereIn('status', ['archived', 'rejected'])->latest()->get();
         } else {
-            $registrations = EventRegistration::with('event')
-                ->where('user_name', auth()->user()->username)
-                ->latest()
-                ->paginate(15);
+            $pending   = EventRegistration::with('event')->where('user_name', auth()->user()->username)->where('status', 'pending')->latest()->get();
+            $approved  = EventRegistration::with('event')->where('user_name', auth()->user()->username)->where('status', 'approved')->latest()->get();
+            $rejected  = EventRegistration::with('event')->where('user_name', auth()->user()->username)->where('status', 'rejected')->latest()->get();
+            $cancelled = EventRegistration::with('event')->where('user_name', auth()->user()->username)->where('status', 'cancelled')->latest()->get();
+            $archived  = collect();
         }
-        return view('registrations.index', compact('registrations'));
+
+        return view('registrations.index', compact('pending', 'approved', 'rejected', 'cancelled', 'archived'));
     }
 
     public function create(Request $request) {
-        // Get all upcoming events that are not full
         $events = Event::where('status', 'upcoming')
             ->whereRaw('participants < max_participants')
             ->orderBy('event_date')
             ->get();
         
-        // If no events found, get all upcoming events
         if ($events->isEmpty()) {
             $events = Event::where('status', 'upcoming')->orderBy('event_date')->get();
         }
@@ -41,17 +45,15 @@ class EventRegistrationController extends Controller {
     }
 
     public function store(Request $request) {
-        // Validate the request
         $request->validate([
-            'event_id' => 'required|exists:events,event_id',
+            'event_id'         => 'required|exists:events,event_id',
             'participant_name' => 'required|string|max:255',
-            'contact_number' => 'required|string|max:20',
+            'contact_number'   => 'required|string|max:20',
         ]);
 
-        $eventId = $request->event_id;
+        $eventId  = $request->event_id;
         $username = auth()->user()->username;
 
-        // Check if user is already registered for this event
         $alreadyRegistered = EventRegistration::where('user_name', $username)
             ->where('event_id', $eventId)
             ->exists();
@@ -60,22 +62,19 @@ class EventRegistrationController extends Controller {
             return back()->with('error', 'You are already registered for this event.')->withInput();
         }
 
-        // Get the event
         $event = Event::where('event_id', $eventId)->firstOrFail();
         
-        // Check if event is full
         if ($event->participants >= $event->max_participants) {
             return back()->with('error', 'Sorry, this event is already full.')->withInput();
         }
 
-        // Create registration
         EventRegistration::create([
-            'user_name' => $username,
-            'event_id' => $eventId,
+            'user_name'         => $username,
+            'event_id'          => $eventId,
             'registration_date' => Carbon::now(),
-            'participant_name' => $request->participant_name,
-            'contact_number' => $request->contact_number,
-            'status' => 'pending',
+            'participant_name'  => $request->participant_name,
+            'contact_number'    => $request->contact_number,
+            'status'            => 'pending',
         ]);
 
         return redirect()->route('registrations.index')
@@ -94,16 +93,15 @@ class EventRegistrationController extends Controller {
 
     public function reject(EventRegistration $registration) {
         $registration->update(['status' => 'rejected']);
-        return back()->with('success', 'Registration rejected.');
+        return back()->with('success', 'Registration rejected and moved to archive.');
     }
 
-    public function destroy(EventRegistration $registration) {
+    public function archive(EventRegistration $registration) {
         if ($registration->status == 'approved') {
             $registration->event->decrement('participants');
         }
-        $registration->delete();
-        return redirect()->route('registrations.index')
-            ->with('success', 'Registration deleted.');
+        $registration->update(['status' => 'archived']);
+        return back()->with('success', 'Registration archived.');
     }
 
     public function cancel(EventRegistration $registration) {
@@ -113,7 +111,7 @@ class EventRegistrationController extends Controller {
         if ($registration->status !== 'pending') {
             return back()->with('error', 'You can only cancel pending registrations.');
         }
-        $registration->delete();
+        $registration->update(['status' => 'cancelled']);
         return redirect()->route('registrations.index')
             ->with('success', 'Registration cancelled.');
     }
