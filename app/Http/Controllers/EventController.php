@@ -5,22 +5,41 @@ use App\Models\Event;
 use Illuminate\Http\Request;
 
 class EventController extends Controller {
-    
+
+    // All supported sport types — always shown in filter regardless of DB contents
+    const SPORT_TYPES = [
+        'Basketball',
+        'Football',
+        'Volleyball',
+        'Swimming',
+        'Running',
+        'Badminton',
+        'Pickle Ball',
+        'Tennis',
+    ];
+
     public function index(Request $request) {
         $query = Event::query();
-        
-        if ($request->filled('sport')) {
-            $query->where('sport_type', $request->sport);
+
+        if ($request->filled('sport_type')) {
+            $query->where('sport_type', $request->sport_type);
         }
-        
+
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-        
+
         $events = $query->orderBy('event_date')->paginate(9);
-        $sports = Event::distinct()->pluck('sport_type')->filter()->values();
-        
-        return view('events.index', compact('events', 'sports'));
+
+        // Merge hardcoded list with any extra types already in DB
+        $dbSports = Event::distinct()->pluck('sport_type')->filter()->values()->toArray();
+        $sportTypes = collect(self::SPORT_TYPES)
+            ->merge($dbSports)
+            ->unique()
+            ->sort()
+            ->values();
+
+        return view('events.index', compact('events', 'sportTypes'));
     }
 
     public function show(Event $event) {
@@ -49,12 +68,12 @@ class EventController extends Controller {
             'description'      => 'nullable|string',
             'status'           => 'required|in:upcoming,ongoing,completed,cancelled',
         ]);
-        
+
         $validated['participants'] = 0;
         $validated['created_by'] = auth()->id();
-        
+
         Event::create($validated);
-        
+
         return redirect()->route('events.index')
             ->with('success', 'Event created successfully!');
     }
@@ -74,9 +93,9 @@ class EventController extends Controller {
             'description'      => 'nullable|string',
             'status'           => 'required|in:upcoming,ongoing,completed,cancelled',
         ]);
-        
+
         $event->update($validated);
-        
+
         return redirect()->route('events.index')
             ->with('success', 'Event updated successfully!');
     }

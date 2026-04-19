@@ -314,7 +314,7 @@
             <div class="sp-page-title">Sports <span>Events</span></div>
             <div class="sp-page-sub">{{ $events->count() }} event{{ $events->count() != 1 ? 's' : '' }} found</div>
         </div>
-        @if(auth()->user()->isAdmin())
+        @if(auth()->check() && auth()->user()->isAdmin())
             <a href="{{ route('events.create') }}" class="sp-add-btn">
                 <i class="bi bi-plus-lg"></i> Add Event
             </a>
