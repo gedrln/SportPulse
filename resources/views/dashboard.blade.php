@@ -277,13 +277,12 @@
     <div class="sp-grid">
         <div class="sp-card">
             <div class="sp-card-head">
-                <div class="sp-card-title">📅 Upcoming Events</div>
+                <div class="sp-card-title">Upcoming Events</div>
                 <div class="sp-card-badge">{{ $recentEvents->count() }} events</div>
             </div>
             <div class="sp-card-body">
                 @forelse($recentEvents as $e)
                 <div class="sp-row">
-                    <div class="sp-row-icon">🏆</div>
                     <div class="sp-row-info">
                         <div class="sp-row-name">{{ $e->event_name }}</div>
                         <div class="sp-row-sub">{{ $e->event_date->format('M d, Y') }} • {{ $e->location }}</div>
@@ -292,7 +291,7 @@
                 </div>
                 @empty
                 <div class="sp-empty">
-                    <span class="sp-empty-icon">📭</span>No upcoming events
+                    <span class="sp-empty-icon"></span>No upcoming events
                 </div>
                 @endforelse
             </div>
@@ -300,13 +299,12 @@
 
         <div class="sp-card">
             <div class="sp-card-head">
-                <div class="sp-card-title">⏳ Pending Registrations</div>
+                <div class="sp-card-title">Pending Registrations</div>
                 <div class="sp-card-badge">{{ $latestRegistrations->where('status','pending')->count() }} pending</div>
             </div>
             <div class="sp-card-body">
                 @forelse($latestRegistrations->where('status','pending') as $r)
                 <div class="sp-row">
-                    <div class="sp-row-icon">👤</div>
                     <div class="sp-row-info">
                         <div class="sp-row-name">{{ $r->participant_name }}</div>
                         <div class="sp-row-sub">{{ $r->event->event_name }}</div>
@@ -324,7 +322,7 @@
                 </div>
                 @empty
                 <div class="sp-empty">
-                    <span class="sp-empty-icon">✅</span>No pending registrations
+                    <span class="sp-empty-icon">x</span>No pending registrations
                 </div>
                 @endforelse
             </div>
@@ -335,7 +333,7 @@
     <div class="sp-grid">
         <div class="sp-card sp-card-full">
             <div class="sp-card-head">
-                <div class="sp-card-title">📊 Registrations — {{ $chartTitle }}</div>
+                <div class="sp-card-title">Registrations — {{ $chartTitle }}</div>
                 <form method="GET" action="{{ route('dashboard') }}" class="sp-chart-filters">
                     <select name="year">
                         @foreach($availableYears as $yr)
@@ -416,13 +414,12 @@
     <div class="sp-grid">
         <div class="sp-card">
             <div class="sp-card-head">
-                <div class="sp-card-title">📋 My Registrations</div>
+                <div class="sp-card-title"> My Registrations</div>
                 <div class="sp-card-badge">{{ $myRegistrations->count() }} total</div>
             </div>
             <div class="sp-card-body">
                 @forelse($myRegistrations as $r)
                 <div class="sp-row">
-                    <div class="sp-row-icon">🎽</div>
                     <div class="sp-row-info">
                         <div class="sp-row-name">{{ $r->event->event_name }}</div>
                         <div class="sp-row-sub">{{ $r->event->event_date->format('M d, Y') }}</div>
@@ -440,13 +437,12 @@
 
         <div class="sp-card">
             <div class="sp-card-head">
-                <div class="sp-card-title">🔥 Upcoming Events</div>
+                <div class="sp-card-title"> Upcoming Events</div>
                 <div class="sp-card-badge">{{ $recentEvents->count() }} events</div>
             </div>
             <div class="sp-card-body">
                 @forelse($recentEvents as $e)
                 <div class="sp-row">
-                    <div class="sp-row-icon">🏆</div>
                     <div class="sp-row-info">
                         <div class="sp-row-name">{{ $e->event_name }}</div>
                         <div class="sp-row-sub">{{ $e->event_date->format('M d, Y') }}</div>
@@ -455,7 +451,7 @@
                 </div>
                 @empty
                 <div class="sp-empty">
-                    <span class="sp-empty-icon">📭</span>No upcoming events
+                    <span class="sp-empty-icon"></span>No upcoming events
                 </div>
                 @endforelse
             </div>

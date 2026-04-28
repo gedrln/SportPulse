@@ -140,15 +140,15 @@
                         <label class="sp-label">Event <span class="required">*</span></label>
                         <select name="event_id" id="event_id" class="sp-select" required onchange="showPreview(this)">
                             <option value="">-- Choose an Event --</option>
-                            @foreach($events as $event)
+                           @foreach($events as $event)
                                 <option value="{{ $event->event_id }}"
                                     data-name="{{ $event->event_name }}"
                                     data-sport="{{ $event->sport_type ?? 'General' }}"
                                     data-date="{{ $event->event_date->format('M d, Y') }}"
                                     data-location="{{ $event->location }}"
-                                    data-slots="{{ $event->max_participants - $event->participants }}"
+                                    data-slots="{{ $event->availableSlots() }}"
                                     {{ old('event_id') == $event->event_id || (isset($selectedEvent) && $selectedEvent->event_id == $event->event_id) ? 'selected' : '' }}>
-                                    {{ $event->event_name }} — {{ $event->event_date->format('M d, Y') }} ({{ $event->max_participants - $event->participants }} slots left)
+                                    {{ $event->event_name }} — {{ $event->event_date->format('M d, Y') }} ({{ $event->availableSlots() }} slots left)
                                 </option>
                             @endforeach
                         </select>

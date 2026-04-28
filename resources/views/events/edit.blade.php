@@ -48,7 +48,6 @@
     <div class="sp-form-wrap">
 
         <div class="sp-form-header">
-            <div class="sp-form-header-icon">✏️</div>
             <div>
                 <div class="sp-form-title">Edit <span>Event</span></div>
                 <div class="sp-form-sub">Update the details for this event</div>

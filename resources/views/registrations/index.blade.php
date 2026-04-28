@@ -434,7 +434,6 @@
                     @empty
                     <tr><td colspan="{{ auth()->user()->isAdmin() ? 7 : 6 }}">
                         <div class="sp-empty">
-                            <span class="sp-empty-icon">⏳</span>
                             <div class="sp-empty-text">No Pending Registrations</div>
                         </div>
                     </td></tr>
@@ -494,7 +493,6 @@
                     @empty
                     <tr><td colspan="{{ auth()->user()->isAdmin() ? 7 : 6 }}">
                         <div class="sp-empty">
-                            <span class="sp-empty-icon">✅</span>
                             <div class="sp-empty-text">No Approved Registrations</div>
                         </div>
                     </td></tr>
@@ -543,7 +541,6 @@
                     @empty
                     <tr><td colspan="{{ auth()->user()->isAdmin() ? 7 : 6 }}">
                         <div class="sp-empty">
-                            <span class="sp-empty-icon">🚫</span>
                             <div class="sp-empty-text">No Cancelled Registrations</div>
                         </div>
                     </td></tr>

@@ -214,6 +214,9 @@
                         <a href="{{ route('events.edit', $event) }}" class="sp-btn-edit">
                             <i class="bi bi-pencil-fill"></i> Edit
                         </a>
+                        <a href="{{ route('teams.index', $event) }}" class="sp-btn-edit" style="background:rgba(34,197,94,0.12);border-color:rgba(34,197,94,0.3);color:#4ade80;">
+                            <i class="bi bi-people-fill"></i> Teams
+                        </a>
                         <form action="{{ route('events.destroy', $event) }}" method="POST" class="d-inline"
                               onsubmit="return confirm('Delete this event permanently?')">
                             @csrf @method('DELETE')
@@ -255,23 +258,13 @@
                 <div class="sp-info-tile-label" style="color:#86efac">
                     <i class="bi bi-people-fill" style="color:#22c55e"></i> Participants
                 </div>
-                @php
+               @php
+                    $active = $event->activeRegistrationsCount();
                     $pct = $event->max_participants > 0
-                        ? min(100, round(($event->participants / $event->max_participants) * 100))
+                        ? min(100, round(($active / $event->max_participants) * 100))
                         : 0;
                     $fillCls = $pct >= 100 ? 'full' : ($pct >= 70 ? 'warn' : '');
                 @endphp
-                <div class="sp-prog-row">
-                    <div class="sp-prog-count">{{ $event->participants }}</div>
-                    <div class="sp-prog-max">/ {{ $event->max_participants }} max</div>
-                </div>
-                <div class="sp-prog-track">
-                    <div class="sp-prog-fill {{ $fillCls }}" style="width:{{ $pct }}%"></div>
-                </div>
-                <div class="sp-info-tile-sub" style="margin-top:6px">
-                    {{ max(0, $event->max_participants - $event->participants) }} slots remaining
-                </div>
-            </div>
 
             {{-- Organizer --}}
             <div class="sp-info-tile">
@@ -321,8 +314,8 @@
                             <i class="bi bi-slash-circle-fill" style="font-size:1.1rem; flex-shrink:0"></i>
                             <span>Sorry, this event is already full. Check back for cancellations.</span>
                         </div>
-                    @elseif($event->status == 'upcoming' || $event->status == 'ongoing')
-                        <a href="{{ route('registrations.create') }}?event_id={{ $event->event_id }}" class="sp-btn-register">
+                    @elseif($event->status == 'upcoming')             
+                               <a href="{{ route('registrations.create') }}?event_id={{ $event->event_id }}" class="sp-btn-register">
                             <i class="bi bi-person-plus-fill"></i> Register for This Event
                         </a>
                     @else

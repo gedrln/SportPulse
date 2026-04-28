@@ -7,12 +7,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class EventRegistrationController extends Controller {
-    
+
     public function index() {
         if (auth()->user()->isAdmin()) {
             $pending   = EventRegistration::with(['user', 'event'])->where('status', 'pending')->latest()->get();
             $approved  = EventRegistration::with(['user', 'event'])->where('status', 'approved')->latest()->get();
-            $rejected  = collect(); // admin sees rejected inside Archived tab
+            $rejected  = EventRegistration::with(['user', 'event'])->where('status', 'rejected')->latest()->get();
             $cancelled = EventRegistration::with(['user', 'event'])->where('status', 'cancelled')->latest()->get();
             $archived  = EventRegistration::with(['user', 'event'])->whereIn('status', ['archived', 'rejected'])->latest()->get();
         } else {
@@ -27,20 +27,21 @@ class EventRegistrationController extends Controller {
     }
 
     public function create(Request $request) {
+        // Only show events that still have available slots (based on active registrations)
         $events = Event::where('status', 'upcoming')
-            ->whereRaw('participants < max_participants')
-            ->orderBy('event_date')
-            ->get();
-        
+            ->get()
+            ->filter(fn($e) => $e->availableSlots() > 0)
+            ->values();
+
         if ($events->isEmpty()) {
-            $events = Event::where('status', 'upcoming')->orderBy('event_date')->get();
+            $events = Event::where('status', 'upcoming')->get();
         }
-        
+
         $selectedEvent = null;
         if ($request->event_id) {
             $selectedEvent = Event::where('event_id', $request->event_id)->first();
         }
-        
+
         return view('registrations.create', compact('events', 'selectedEvent'));
     }
 
@@ -54,18 +55,58 @@ class EventRegistrationController extends Controller {
         $eventId  = $request->event_id;
         $username = auth()->user()->username;
 
+        // Check if already registered for this specific event (active only)
         $alreadyRegistered = EventRegistration::where('user_name', $username)
             ->where('event_id', $eventId)
+            ->whereNotIn('status', ['cancelled', 'rejected'])
             ->exists();
-            
+
         if ($alreadyRegistered) {
             return back()->with('error', 'You are already registered for this event.')->withInput();
         }
 
         $event = Event::where('event_id', $eventId)->firstOrFail();
-        
-        if ($event->participants >= $event->max_participants) {
-            return back()->with('error', 'Sorry, this event is already full.')->withInput();
+
+        // Block if event is not upcoming
+        if ($event->status !== 'upcoming') {
+            return back()->with('error', 'Registration is closed. This event is currently ' . ucfirst($event->status) . '.')->withInput();
+        }
+
+        // Block if no available slots (pending + approved >= max)
+        if ($event->isFull()) {
+            return back()->with('error', 'Sorry, this event is already full. No more slots available.')->withInput();
+        }
+
+        // Block exact same time conflict
+        $sameTimeCount = EventRegistration::where('user_name', $username)
+            ->whereNotIn('status', ['cancelled', 'rejected'])
+            ->whereHas('event', function ($q) use ($event) {
+                $q->where('event_date', $event->event_date);
+            })
+            ->count();
+
+        if ($sameTimeCount >= 1) {
+            return back()->with('error',
+                'You already have an event at ' .
+                $event->event_date->format('M d, Y g:i A') .
+                '. You cannot register for two events at the exact same time.'
+            )->withInput();
+        }
+
+        // Block more than 2 on same date
+        $sameDateCount = EventRegistration::where('user_name', $username)
+            ->whereNotIn('status', ['cancelled', 'rejected'])
+            ->whereHas('event', function ($q) use ($event) {
+                $q->whereDate('event_date', $event->event_date->toDateString());
+            })
+            ->count();
+
+        if ($sameDateCount >= 2) {
+            return back()->with('error',
+                'You already have ' . $sameDateCount . ' event(s) on ' .
+                $event->event_date->format('M d, Y') .
+                '. You cannot register for more than 2 events on the same date.'
+            )->withInput();
         }
 
         EventRegistration::create([
@@ -83,24 +124,30 @@ class EventRegistrationController extends Controller {
 
     public function approve(EventRegistration $registration) {
         $event = $registration->event;
-        if ($event->participants >= $event->max_participants) {
-            return back()->with('error', 'Event is full!');
+
+        // Only check approved count vs max for final approval
+        if ($event->approvedCount() >= $event->max_participants) {
+            return back()->with('error', 'Cannot approve — event is already full!');
         }
+
         $registration->update(['status' => 'approved']);
-        $event->increment('participants');
+
+        // Sync participants count with approved count
+        $event->syncParticipants();
+
         return back()->with('success', 'Registration approved!');
     }
 
     public function reject(EventRegistration $registration) {
         $registration->update(['status' => 'rejected']);
+        // Sync in case it was previously approved
+        $registration->event->syncParticipants();
         return back()->with('success', 'Registration rejected and moved to archive.');
     }
 
     public function archive(EventRegistration $registration) {
-        if ($registration->status == 'approved') {
-            $registration->event->decrement('participants');
-        }
-        $registration->update(['status' => 'archived']);
+        $registration->update(['status' => 'archived', 'team_id' => null]);
+        $registration->event->syncParticipants();
         return back()->with('success', 'Registration archived.');
     }
 
@@ -112,6 +159,7 @@ class EventRegistrationController extends Controller {
             return back()->with('error', 'You can only cancel pending registrations.');
         }
         $registration->update(['status' => 'cancelled']);
+        $registration->event->syncParticipants();
         return redirect()->route('registrations.index')
             ->with('success', 'Registration cancelled.');
     }

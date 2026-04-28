@@ -12,7 +12,7 @@ class EventRegistration extends Model {
 
     protected $fillable = [
         'user_name', 'event_id', 'registration_date',
-        'participant_name', 'contact_number', 'status'
+        'participant_name', 'contact_number', 'status', 'team_id'
     ];
 
     protected function casts(): array {
@@ -27,5 +27,9 @@ class EventRegistration extends Model {
 
     public function event() {
         return $this->belongsTo(Event::class, 'event_id', 'event_id');
+    }
+
+    public function team() {
+        return $this->belongsTo(Team::class, 'team_id', 'team_id');
     }
 }

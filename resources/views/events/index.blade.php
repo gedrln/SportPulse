@@ -33,7 +33,7 @@
         border: 1px solid rgba(255,255,255,0.06);
         border-radius: 14px;
         padding: 16px 20px;
-        margin-bottom: 28px;
+        margin-bottom: 36px;
         display: flex;
         align-items: center;
         gap: 12px;
@@ -88,6 +88,46 @@
     }
     .sp-reset-btn:hover { background: rgba(255,255,255,0.1); color: #cbd5e1; }
 
+    /* Section Headers */
+    .sp-section {
+        margin-bottom: 40px;
+    }
+    .sp-section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .sp-section-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    .sp-section-dot.upcoming  { background: #f97316; box-shadow: 0 0 8px rgba(249,115,22,0.6); }
+    .sp-section-dot.ongoing   { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.6); }
+    .sp-section-dot.completed { background: #475569; }
+    .sp-section-title {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.3rem;
+        letter-spacing: 1.5px;
+        line-height: 1;
+    }
+    .sp-section-title.upcoming  { color: #f97316; }
+    .sp-section-title.ongoing   { color: #4ade80; }
+    .sp-section-title.completed { color: #64748b; }
+    .sp-section-count {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: #64748b;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 20px;
+    }
+
     /* Events Grid */
     .sp-events-grid {
         display: grid;
@@ -112,9 +152,9 @@
         height: 4px;
         background: linear-gradient(90deg, #f97316, #ea580c);
     }
-    .sp-event-card-accent.ongoing { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .sp-event-card-accent.ongoing   { background: linear-gradient(90deg, #22c55e, #16a34a); }
     .sp-event-card-accent.completed { background: linear-gradient(90deg, #64748b, #475569); }
-    .sp-event-card-accent.full { background: linear-gradient(90deg, #ef4444, #dc2626); }
+    .sp-event-card-accent.full      { background: linear-gradient(90deg, #ef4444, #dc2626); }
 
     .sp-event-card-body { padding: 20px; }
 
@@ -158,9 +198,7 @@
     .sp-meta-row span { color: #94a3b8; }
 
     /* Participants bar */
-    .sp-participants {
-        margin-bottom: 18px;
-    }
+    .sp-participants { margin-bottom: 18px; }
     .sp-participants-label {
         display: flex;
         justify-content: space-between;
@@ -270,11 +308,20 @@
     .sp-empty-state {
         grid-column: span 3;
         text-align: center;
+        padding: 40px 20px;
+        color: #475569;
+    }
+    .sp-empty-icon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+    .sp-empty-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: #64748b; letter-spacing: 1px; }
+
+    /* No results (filtered) */
+    .sp-no-results {
+        text-align: center;
         padding: 60px 20px;
         color: #475569;
     }
-    .sp-empty-icon { font-size: 3rem; display: block; margin-bottom: 12px; }
-    .sp-empty-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: #64748b; letter-spacing: 1px; }
+    .sp-no-results-icon { font-size: 3rem; display: block; margin-bottom: 12px; }
+    .sp-no-results-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: #64748b; letter-spacing: 1px; }
 
     /* Admin add event btn */
     .sp-add-btn {
@@ -306,13 +353,20 @@
     }
 </style>
 
+@php
+    /* Reusable macro to count total events shown */
+    $totalCount = $groupedEvents
+        ? collect($groupedEvents)->flatten()->count()
+        : ($events ? $events->count() : 0);
+@endphp
+
 <div class="sp-events">
 
     {{-- Page Header --}}
     <div class="sp-page-header">
         <div>
             <div class="sp-page-title">Sports <span>Events</span></div>
-            <div class="sp-page-sub">{{ $events->count() }} event{{ $events->count() != 1 ? 's' : '' }} found</div>
+            <div class="sp-page-sub">{{ $totalCount }} event{{ $totalCount != 1 ? 's' : '' }} found</div>
         </div>
         @if(auth()->check() && auth()->user()->isAdmin())
             <a href="{{ route('events.create') }}" class="sp-add-btn">
@@ -342,94 +396,227 @@
         </div>
     </form>
 
-    {{-- Events Grid --}}
-    <div class="sp-events-grid">
-        @forelse($events as $event)
-            @php
-                $isFull = $event->participants >= $event->max_participants;
-                $fillPct = $event->max_participants > 0 ? min(100, round(($event->participants / $event->max_participants) * 100)) : 0;
-                $fillClass = $fillPct >= 100 ? 'full' : ($fillPct < 60 ? 'safe' : '');
-                $accentClass = $event->status == 'ongoing' ? 'ongoing' : ($event->status == 'completed' ? 'completed' : ($isFull ? 'full' : ''));
+    {{-- ============================================================
+         GROUPED VIEW (no status filter active)
+         Shows three separate sections: Upcoming, Ongoing, Completed
+    ============================================================ --}}
+    @if($groupedEvents)
 
-                $userRegistered = false;
-                if(auth()->check() && !auth()->user()->isAdmin()) {
-                    $userRegistered = $event->registrations()
-                        ->where('user_name', auth()->user()->username)
-                        ->whereIn('status', ['pending','approved'])
-                        ->exists();
-                }
-            @endphp
-            <div class="sp-event-card">
-                <div class="sp-event-card-accent {{ $accentClass }}"></div>
-                <div class="sp-event-card-body">
-                    <span class="sp-status-badge {{ $event->status }}">{{ ucfirst($event->status) }}</span>
-                    @if($event->sport_type)
-                        <div class="sp-sport-chip"><i class="bi bi-trophy-fill" style="font-size:10px"></i> {{ $event->sport_type }}</div>
-                    @endif
-                    <div class="sp-event-name">{{ $event->event_name }}</div>
+        @php
+            $sections = [
+                'upcoming'  => ['label' => 'Upcoming',  'icon' => 'bi-calendar-event-fill'],
+                'ongoing'   => ['label' => 'Ongoing',   'icon' => 'bi-lightning-charge-fill'],
+                'completed' => ['label' => 'Completed', 'icon' => 'bi-check-circle-fill'],
+            ];
+        @endphp
 
-                    <div class="sp-event-meta">
-                        <div class="sp-meta-row">
-                            <i class="bi bi-geo-alt-fill"></i>
-                            <span>{{ $event->location }}</span>
-                        </div>
-                        <div class="sp-meta-row">
-                            <i class="bi bi-calendar3"></i>
-                            <span>
-                                {{ $event->event_date->format('M d, Y g:i A') }}
-                                @if($event->event_end_date)
-                                    — {{ $event->event_end_date->format('M d, Y') }}
+        @foreach($sections as $statusKey => $meta)
+            @php $sectionEvents = $groupedEvents[$statusKey]; @endphp
+
+            {{-- Only render section if it has events --}}
+            @if($sectionEvents->count() > 0)
+            <div class="sp-section">
+                <div class="sp-section-header">
+                    <div class="sp-section-dot {{ $statusKey }}"></div>
+                    <div class="sp-section-title {{ $statusKey }}">{{ $meta['label'] }}</div>
+                    <span class="sp-section-count">{{ $sectionEvents->count() }} {{ $sectionEvents->count() == 1 ? 'event' : 'events' }}</span>
+                </div>
+
+                <div class="sp-events-grid">
+                    @foreach($sectionEvents as $event)
+                        @php
+                            $isFull      = $event->participants >= $event->max_participants;
+                            $fillPct     = $event->max_participants > 0 ? min(100, round(($event->participants / $event->max_participants) * 100)) : 0;
+                            $fillClass   = $fillPct >= 100 ? 'full' : ($fillPct < 60 ? 'safe' : '');
+                            $accentClass = $event->status == 'ongoing' ? 'ongoing' : ($event->status == 'completed' ? 'completed' : ($isFull ? 'full' : ''));
+
+                            $userRegistered = false;
+                            if(auth()->check() && !auth()->user()->isAdmin()) {
+                                $userRegistered = $event->registrations()
+                                    ->where('user_name', auth()->user()->username)
+                                    ->whereIn('status', ['pending','approved'])
+                                    ->exists();
+                            }
+                        @endphp
+                        <div class="sp-event-card">
+                            <div class="sp-event-card-accent {{ $accentClass }}"></div>
+                            <div class="sp-event-card-body">
+                                <span class="sp-status-badge {{ $event->status }}">{{ ucfirst($event->status) }}</span>
+                                @if($event->sport_type)
+                                    <div class="sp-sport-chip"><i class="bi bi-trophy-fill" style="font-size:10px"></i> {{ $event->sport_type }}</div>
                                 @endif
-                            </span>
-                        </div>
-                    </div>
+                                <div class="sp-event-name">{{ $event->event_name }}</div>
 
-                    <div class="sp-participants">
-                        <div class="sp-participants-label">
-                            <span><i class="bi bi-people-fill me-1"></i>Participants</span>
-                            <span>{{ $event->participants }}/{{ $event->max_participants }}</span>
-                        </div>
-                        <div class="sp-progress-track">
-                            <div class="sp-progress-fill {{ $fillClass }}" style="width: {{ $fillPct }}%"></div>
-                        </div>
-                    </div>
+                                <div class="sp-event-meta">
+                                    <div class="sp-meta-row">
+                                        <i class="bi bi-geo-alt-fill"></i>
+                                        <span>{{ $event->location }}</span>
+                                    </div>
+                                    <div class="sp-meta-row">
+                                        <i class="bi bi-calendar3"></i>
+                                        <span>
+                                            {{ $event->event_date->format('M d, Y g:i A') }}
+                                            @if($event->event_end_date)
+                                                — {{ $event->event_end_date->format('M d, Y') }}
+                                            @endif
+                                        </span>
+                                    </div>
+                                </div>
 
-                    <div class="sp-card-actions">
-                        <a href="{{ route('events.show', $event) }}" class="sp-btn-view">
-                            <i class="bi bi-eye"></i> View Details
-                        </a>
-                        @auth
-                            @if(!auth()->user()->isAdmin())
-                                @if($userRegistered)
-                                    <div class="sp-btn-registered">
-                                        <i class="bi bi-check-circle-fill"></i> Already Registered
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="bi bi-people"></i> Participants</span>
+                                    <span class="fw-bold">{{ $event->activeRegistrationsCount() }}/{{ $event->max_participants }}</span>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-success"
+                                        style="width: {{ $event->max_participants > 0 ? ($event->activeRegistrationsCount() / $event->max_participants) * 100 : 0 }}%">
                                     </div>
-                                @elseif($isFull || $event->status == 'completed')
-                                    <div class="sp-btn-full">
-                                        <i class="bi bi-slash-circle"></i> {{ $isFull ? 'Event Full' : 'Closed' }}
-                                    </div>
-                                @elseif($event->status == 'upcoming' || $event->status == 'ongoing')
-                                    <a href="{{ route('registrations.create') }}?event_id={{ $event->event_id }}" class="sp-btn-register">
-                                        <i class="bi bi-person-plus-fill"></i> Register Now
+                                </div>
+
+                                <div class="sp-card-actions">
+                                    <a href="{{ route('events.show', $event) }}" class="sp-btn-view">
+                                        <i class="bi bi-eye"></i> View Details
                                     </a>
-                                @endif
-                            @else
-                                <a href="{{ route('events.edit', $event) }}" class="sp-btn-view">
-                                    <i class="bi bi-pencil-fill"></i> Edit Event
-                                </a>
-                            @endif
-                        @endauth
-                    </div>
+                                    @auth
+                                        @if(!auth()->user()->isAdmin())
+                                            @if($userRegistered)
+                                                <div class="sp-btn-registered">
+                                                    <i class="bi bi-check-circle-fill"></i> Already Registered
+                                                </div>
+                                            @elseif($isFull || $event->status == 'completed')
+                                                <div class="sp-btn-full">
+                                                    <i class="bi bi-slash-circle"></i> {{ $isFull ? 'Event Full' : 'Closed' }}
+                                                </div>
+                                            @elseif($event->status == 'upcoming' || $event->status == 'ongoing')
+                                                <a href="{{ route('registrations.create') }}?event_id={{ $event->event_id }}" class="sp-btn-register">
+                                                    <i class="bi bi-person-plus-fill"></i> Register Now
+                                                </a>
+                                            @endif
+                                        @else
+                                            <a href="{{ route('events.edit', $event) }}" class="sp-btn-view">
+                                                <i class="bi bi-pencil-fill"></i> Edit Event
+                                            </a>
+                                        @endif
+                                    @endauth
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
-        @empty
-            <div class="sp-empty-state">
-                <span class="sp-empty-icon">🏟️</span>
-                <div class="sp-empty-title">No Events Found</div>
-                <p style="color:#475569; font-size:0.82rem; margin-top:8px;">Try adjusting your filters or check back later.</p>
+            @endif
+        @endforeach
+
+        {{-- All sections empty --}}
+        @if(collect($groupedEvents)->flatten()->count() == 0)
+            <div class="sp-no-results">
+                <span class="sp-no-results-icon">🏟️</span>
+                <div class="sp-no-results-title">No Events Found</div>
+                <p style="color:#475569; font-size:0.82rem; margin-top:8px;">Check back later for upcoming events.</p>
             </div>
-        @endforelse
-    </div>
+        @endif
+
+    {{-- ============================================================
+         FILTERED VIEW (a specific status was selected)
+         Shows a flat grid under that status's section header only
+    ============================================================ --}}
+    @else
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <div class="sp-section-dot {{ $filterStatus }}"></div>
+                <div class="sp-section-title {{ $filterStatus }}">{{ ucfirst($filterStatus) }}</div>
+                <span class="sp-section-count">{{ $events->count() }} {{ $events->count() == 1 ? 'event' : 'events' }}</span>
+            </div>
+
+            <div class="sp-events-grid">
+                @forelse($events as $event)
+                    @php
+                        $isFull      = $event->participants >= $event->max_participants;
+                        $fillPct     = $event->max_participants > 0 ? min(100, round(($event->participants / $event->max_participants) * 100)) : 0;
+                        $fillClass   = $fillPct >= 100 ? 'full' : ($fillPct < 60 ? 'safe' : '');
+                        $accentClass = $event->status == 'ongoing' ? 'ongoing' : ($event->status == 'completed' ? 'completed' : ($isFull ? 'full' : ''));
+
+                        $userRegistered = false;
+                        if(auth()->check() && !auth()->user()->isAdmin()) {
+                            $userRegistered = $event->registrations()
+                                ->where('user_name', auth()->user()->username)
+                                ->whereIn('status', ['pending','approved'])
+                                ->exists();
+                        }
+                    @endphp
+                    <div class="sp-event-card">
+                        <div class="sp-event-card-accent {{ $accentClass }}"></div>
+                        <div class="sp-event-card-body">
+                            <span class="sp-status-badge {{ $event->status }}">{{ ucfirst($event->status) }}</span>
+                            @if($event->sport_type)
+                                <div class="sp-sport-chip"><i class="bi bi-trophy-fill" style="font-size:10px"></i> {{ $event->sport_type }}</div>
+                            @endif
+                            <div class="sp-event-name">{{ $event->event_name }}</div>
+
+                            <div class="sp-event-meta">
+                                <div class="sp-meta-row">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                    <span>{{ $event->location }}</span>
+                                </div>
+                                <div class="sp-meta-row">
+                                    <i class="bi bi-calendar3"></i>
+                                    <span>
+                                        {{ $event->event_date->format('M d, Y g:i A') }}
+                                        @if($event->event_end_date)
+                                            — {{ $event->event_end_date->format('M d, Y') }}
+                                        @endif
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="sp-participants">
+                                <div class="sp-participants-label">
+                                    <span><i class="bi bi-people-fill me-1"></i>Participants</span>
+                                    <span>{{ $event->participants }}/{{ $event->max_participants }}</span>
+                                </div>
+                                <div class="sp-progress-track">
+                                    <div class="sp-progress-fill {{ $fillClass }}" style="width: {{ $fillPct }}%"></div>
+                                </div>
+                            </div>
+
+                            <div class="sp-card-actions">
+                                <a href="{{ route('events.show', $event) }}" class="sp-btn-view">
+                                    <i class="bi bi-eye"></i> View Details
+                                </a>
+                                @auth
+                                    @if(!auth()->user()->isAdmin())
+                                        @if($userRegistered)
+                                            <div class="sp-btn-registered">
+                                                <i class="bi bi-check-circle-fill"></i> Already Registered
+                                            </div>
+                                        @elseif($isFull || $event->status == 'completed')
+                                            <div class="sp-btn-full">
+                                                <i class="bi bi-slash-circle"></i> {{ $isFull ? 'Event Full' : 'Closed' }}
+                                            </div>
+                                        @elseif($event->status == 'upcoming' || $event->status == 'ongoing')
+                                            <a href="{{ route('registrations.create') }}?event_id={{ $event->event_id }}" class="sp-btn-register">
+                                                <i class="bi bi-person-plus-fill"></i> Register Now
+                                            </a>
+                                        @endif
+                                    @else
+                                        <a href="{{ route('events.edit', $event) }}" class="sp-btn-view">
+                                            <i class="bi bi-pencil-fill"></i> Edit Event
+                                        </a>
+                                    @endif
+                                @endauth
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="sp-empty-state">
+                        <span class="sp-empty-icon">🏟️</span>
+                        <div class="sp-empty-title">No {{ ucfirst($filterStatus) }} Events</div>
+                        <p style="color:#475569; font-size:0.82rem; margin-top:8px;">Try adjusting your filters or check back later.</p>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    @endif
 
 </div>
 @endsection
