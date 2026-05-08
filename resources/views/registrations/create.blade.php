@@ -98,7 +98,6 @@
     <div class="sp-form-wrap">
 
         <div class="sp-form-header">
-            <div class="sp-form-header-icon">🏅</div>
             <div>
                 <div class="sp-form-title">Register for <span>Event</span></div>
                 <div class="sp-form-sub">Secure your spot in the competition</div>

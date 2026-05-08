@@ -3,6 +3,8 @@
 
 @section('content')
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Bebas+Neue&display=swap');
 
@@ -78,7 +80,15 @@
         border: 1px solid rgba(249,115,22,0.25);
         border-left: 3px solid #f97316;
     }
-    .sp-notif-icon { font-size: 20px; flex-shrink: 0; }
+    .sp-notif-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .sp-notif.urgent .sp-notif-icon { color: #f87171; }
+    .sp-notif.soon   .sp-notif-icon { color: #fb923c; }
     .sp-notif-text { font-size: 0.83rem; flex: 1; }
     .sp-notif.urgent .sp-notif-text { color: #fca5a5; }
     .sp-notif.urgent .sp-notif-text strong { color: #fef2f2; }
@@ -86,7 +96,19 @@
     .sp-notif.soon .sp-notif-text strong { color: #fff7ed; }
     .sp-notif-badge-red   { background: #ef4444; color: white; font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: 4px; }
     .sp-notif-badge-orange { background: #f97316; color: white; font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: 4px; }
-    .sp-notif-close { background: none; border: none; color: #64748b; font-size: 1rem; cursor: pointer; padding: 0; line-height: 1; }
+    .sp-notif-close {
+        background: none;
+        border: none;
+        color: #64748b;
+        font-size: 1rem;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        transition: color 0.15s;
+    }
+    .sp-notif-close:hover { color: #94a3b8; }
 
     /* Stat Cards */
     .sp-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -111,7 +133,6 @@
     .sp-stat.red .sp-stat-num   { color: #f87171; }
     .sp-stat-sub { font-size: 0.72rem; color: #475569; margin-top: 6px; }
 
-    /* Admin Stats (4 cols) */
     .sp-stats-admin { grid-template-columns: repeat(4, 1fr); }
 
     /* Cards */
@@ -130,7 +151,6 @@
     /* Rows */
     .sp-row { padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; align-items: center; gap: 12px; }
     .sp-row:last-child { border-bottom: none; }
-    .sp-row-icon { width: 34px; height: 34px; border-radius: 10px; background: rgba(249,115,22,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
     .sp-row-info { flex: 1; min-width: 0; }
     .sp-row-name { font-size: 0.82rem; font-weight: 500; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sp-row-sub  { font-size: 0.72rem; color: #64748b; margin-top: 2px; }
@@ -148,58 +168,43 @@
         background: rgba(249,115,22,0.15);
         border: 1px solid rgba(249,115,22,0.3);
         color: #f97316;
-        font-size: 0.72rem;
-        padding: 5px 14px;
-        border-radius: 8px;
-        font-family: 'DM Sans', sans-serif;
-        cursor: pointer;
-        font-weight: 600;
-        white-space: nowrap;
-        text-decoration: none;
-        display: inline-block;
+        font-size: 0.72rem; padding: 5px 14px; border-radius: 8px;
+        font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 600;
+        white-space: nowrap; text-decoration: none; display: inline-block;
         transition: background 0.2s;
     }
     .sp-reg-btn:hover { background: rgba(249,115,22,0.28); color: #f97316; }
     .sp-approve-btn {
-        background: rgba(34,197,94,0.15);
-        border: 1px solid rgba(34,197,94,0.3);
-        color: #4ade80;
+        background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #4ade80;
         font-size: 0.72rem; padding: 5px 12px; border-radius: 8px;
         font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 600;
     }
     .sp-reject-btn {
-        background: rgba(239,68,68,0.12);
-        border: 1px solid rgba(239,68,68,0.25);
-        color: #f87171;
+        background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #f87171;
         font-size: 0.72rem; padding: 5px 12px; border-radius: 8px;
         font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 600;
     }
 
-    /* Chart card */
+    /* Chart */
     .sp-chart-filters { display: flex; gap: 8px; align-items: center; }
     .sp-chart-filters select {
-        background: #0f172a;
-        border: 1px solid rgba(255,255,255,0.1);
-        color: #cbd5e1;
-        font-size: 0.75rem;
-        padding: 4px 8px;
-        border-radius: 8px;
-        font-family: 'DM Sans', sans-serif;
+        background: #0f172a; border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1;
+        font-size: 0.75rem; padding: 4px 8px; border-radius: 8px; font-family: 'DM Sans', sans-serif;
     }
     .sp-chart-filters .sp-filter-btn {
-        background: #f97316; border: none; color: white;
-        font-size: 0.75rem; padding: 5px 14px; border-radius: 8px;
-        font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 600;
+        background: #f97316; border: none; color: white; font-size: 0.75rem;
+        padding: 5px 14px; border-radius: 8px; font-family: 'DM Sans', sans-serif;
+        cursor: pointer; font-weight: 600;
     }
     .sp-chart-filters .sp-reset-btn {
-        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-        color: #94a3b8; font-size: 0.75rem; padding: 5px 12px; border-radius: 8px;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8;
+        font-size: 0.75rem; padding: 5px 12px; border-radius: 8px;
         font-family: 'DM Sans', sans-serif; cursor: pointer; text-decoration: none; display: inline-block;
     }
 
     /* Empty state */
     .sp-empty { padding: 28px; text-align: center; color: #475569; font-size: 0.82rem; }
-    .sp-empty-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+    .sp-empty-icon { font-size: 1.6rem; display: block; margin-bottom: 8px; color: #334155; }
 
     @media (max-width: 768px) {
         .sp-stats, .sp-stats-admin { grid-template-columns: repeat(2, 1fr); }
@@ -211,7 +216,7 @@
 
 <div class="sp-dash">
 
-    {{-- Hero Welcome --}}
+    {{-- Hero --}}
     <div class="sp-hero">
         <div>
             <div class="sp-hero-badge">{{ auth()->user()->isAdmin() ? 'Admin' : 'Player' }}</div>
@@ -247,9 +252,7 @@
     @endif
 
     @if($isAdmin)
-    {{-- ===================== ADMIN DASHBOARD ===================== --}}
-
-    {{-- Stat Cards --}}
+    {{-- ===================== ADMIN ===================== --}}
     <div class="sp-stats sp-stats-admin">
         <div class="sp-stat blue">
             <div class="sp-stat-label">Total Events</div>
@@ -273,7 +276,6 @@
         </div>
     </div>
 
-    {{-- Upcoming Events + Pending Registrations --}}
     <div class="sp-grid">
         <div class="sp-card">
             <div class="sp-card-head">
@@ -291,7 +293,7 @@
                 </div>
                 @empty
                 <div class="sp-empty">
-                    <span class="sp-empty-icon"></span>No upcoming events
+                    <i class="bi bi-calendar-x sp-empty-icon"></i>No upcoming events
                 </div>
                 @endforelse
             </div>
@@ -312,24 +314,23 @@
                     <div class="d-flex gap-1">
                         <form action="{{ route('registrations.approve', $r) }}" method="POST" class="d-inline">
                             @csrf @method('PATCH')
-                            <button class="sp-approve-btn">✓</button>
+                            <button class="sp-approve-btn"><i class="bi bi-check-lg"></i></button>
                         </form>
                         <form action="{{ route('registrations.reject', $r) }}" method="POST" class="d-inline">
                             @csrf @method('PATCH')
-                            <button class="sp-reject-btn">✗</button>
+                            <button class="sp-reject-btn"><i class="bi bi-x-lg"></i></button>
                         </form>
                     </div>
                 </div>
                 @empty
                 <div class="sp-empty">
-                    <span class="sp-empty-icon">x</span>No pending registrations
+                    <i class="bi bi-inbox sp-empty-icon"></i>No pending registrations
                 </div>
                 @endforelse
             </div>
         </div>
     </div>
 
-    {{-- Chart --}}
     <div class="sp-grid">
         <div class="sp-card sp-card-full">
             <div class="sp-card-head">
@@ -366,13 +367,18 @@
     </div>
 
     @else
-    {{-- ===================== USER DASHBOARD ===================== --}}
+    {{-- ===================== USER ===================== --}}
 
-    {{-- Upcoming Notification Banners --}}
     @if(isset($upcomingNotifications) && $upcomingNotifications->count() > 0)
         @foreach($upcomingNotifications as $n)
             <div class="sp-notif {{ $n->days_left <= 3 ? 'urgent' : 'soon' }} mb-3">
-                <div class="sp-notif-icon">{{ $n->days_left <= 3 ? '🚨' : '⏰' }}</div>
+                <div class="sp-notif-icon">
+                    @if($n->days_left <= 3)
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    @else
+                        <i class="bi bi-clock-fill"></i>
+                    @endif
+                </div>
                 <div class="sp-notif-text">
                     <strong>{{ $n->event->event_name }}</strong> is
                     @if($n->days_left == 0)
@@ -386,12 +392,13 @@
                     @endif
                     — {{ $n->event->event_date->format('M d, Y') }} @ {{ $n->event->location }}
                 </div>
-                <button class="sp-notif-close" onclick="this.parentElement.remove()">✕</button>
+                <button class="sp-notif-close" onclick="this.parentElement.remove()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
         @endforeach
     @endif
 
-    {{-- Stat Cards --}}
     <div class="sp-stats">
         <div class="sp-stat blue">
             <div class="sp-stat-label">Events Available</div>
@@ -410,11 +417,10 @@
         </div>
     </div>
 
-    {{-- My Registrations + Upcoming Events --}}
     <div class="sp-grid">
         <div class="sp-card">
             <div class="sp-card-head">
-                <div class="sp-card-title"> My Registrations</div>
+                <div class="sp-card-title">My Registrations</div>
                 <div class="sp-card-badge">{{ $myRegistrations->count() }} total</div>
             </div>
             <div class="sp-card-body">
@@ -428,7 +434,7 @@
                 </div>
                 @empty
                 <div class="sp-empty">
-                    <span class="sp-empty-icon">📭</span>
+                    <i class="bi bi-inbox sp-empty-icon"></i>
                     No registrations yet. <a href="{{ route('registrations.create') }}" style="color:#f97316;">Register now</a>
                 </div>
                 @endforelse
@@ -437,7 +443,7 @@
 
         <div class="sp-card">
             <div class="sp-card-head">
-                <div class="sp-card-title"> Upcoming Events</div>
+                <div class="sp-card-title">Upcoming Events</div>
                 <div class="sp-card-badge">{{ $recentEvents->count() }} events</div>
             </div>
             <div class="sp-card-body">
@@ -451,7 +457,7 @@
                 </div>
                 @empty
                 <div class="sp-empty">
-                    <span class="sp-empty-icon"></span>No upcoming events
+                    <i class="bi bi-calendar-x sp-empty-icon"></i>No upcoming events
                 </div>
                 @endforelse
             </div>

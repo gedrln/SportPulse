@@ -3,12 +3,13 @@
 
 @section('content')
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Bebas+Neue&display=swap');
 
     .sp-reg { font-family: 'DM Sans', sans-serif; }
 
-    /* Page Header */
     .sp-page-header {
         display: flex;
         align-items: center;
@@ -27,7 +28,6 @@
     .sp-page-title span { color: #f97316; }
     .sp-page-sub { color: #64748b; font-size: 0.8rem; margin-top: 4px; }
 
-    /* Info Alert */
     .sp-alert-info {
         background: rgba(59,130,246,0.08);
         border: 1px solid rgba(59,130,246,0.2);
@@ -88,8 +88,8 @@
         color: #f1f5f9;
         border: 1px solid rgba(255,255,255,0.08);
     }
-    .sp-tab-btn.active.tab-pending  { color: #fbbf24; border-color: rgba(251,191,36,0.2); }
-    .sp-tab-btn.active.tab-approved { color: #4ade80; border-color: rgba(74,222,128,0.2); }
+    .sp-tab-btn.active.tab-pending   { color: #fbbf24; border-color: rgba(251,191,36,0.2); }
+    .sp-tab-btn.active.tab-approved  { color: #4ade80; border-color: rgba(74,222,128,0.2); }
     .sp-tab-btn.active.tab-cancelled { color: #f87171; border-color: rgba(248,113,113,0.2); }
     .sp-tab-btn.active.tab-rejected  { color: #f87171; border-color: rgba(248,113,113,0.2); }
     .sp-tab-btn.active.tab-archived  { color: #94a3b8; border-color: rgba(148,163,184,0.2); }
@@ -107,11 +107,10 @@
     .tab-rejected  .sp-tab-count { background: rgba(248,113,113,0.12); color: #f87171; }
     .tab-archived  .sp-tab-count { background: rgba(148,163,184,0.12); color: #94a3b8; }
 
-    /* Tab Panes */
     .sp-tab-pane { display: none; }
     .sp-tab-pane.active { display: block; }
 
-    /* Table */
+    /* Table wrapper */
     .sp-table-wrap {
         background: #1e293b;
         border: 1px solid rgba(255,255,255,0.06);
@@ -147,6 +146,46 @@
         padding: 14px 18px;
         color: #cbd5e1;
         vertical-align: middle;
+    }
+
+    /* Sport divider row */
+    .sp-sport-divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 18px;
+        background: rgba(255,255,255,0.03);
+        border-top: 1px solid rgba(255,255,255,0.06);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .sp-sport-divider:first-child {
+        border-top: none;
+    }
+    .sp-sport-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        background: rgba(249,115,22,0.12);
+        border: 1px solid rgba(249,115,22,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #f97316;
+        font-size: 0.75rem;
+        flex-shrink: 0;
+    }
+    .sp-sport-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #94a3b8;
+    }
+    .sp-sport-count {
+        margin-left: auto;
+        font-size: 0.68rem;
+        color: #475569;
+        font-weight: 600;
     }
 
     /* ID badge */
@@ -258,7 +297,7 @@
         text-align: center;
         color: #475569;
     }
-    .sp-empty-icon { font-size: 2.5rem; display: block; margin-bottom: 12px; }
+    .sp-empty-icon { font-size: 1.8rem; display: block; margin-bottom: 12px; color: #334155; }
     .sp-empty-text { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 1px; color: #64748b; }
 
     /* Register btn */
@@ -287,6 +326,24 @@
         .sp-page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
     }
 </style>
+
+{{-- Helper: map sport_type to a Bootstrap Icon class --}}
+@php
+function sportIcon(string $sport): string {
+    return match(strtolower(trim($sport))) {
+        'basketball'         => 'bi-dribbble',
+        'volleyball'         => 'bi-circle',
+        'football', 'soccer' => 'bi-trophy',
+        'badminton'          => 'bi-lightning',
+        'pickle ball',
+        'pickleball'         => 'bi-table',
+        'tennis'             => 'bi-circle-half',
+        'swimming'           => 'bi-water',
+        'running'            => 'bi-person-walking',
+        default              => 'bi-flag',
+    };
+}
+@endphp
 
 <div class="sp-reg">
 
@@ -377,272 +434,330 @@
         @endif
     </div>
 
-    {{-- PENDING TAB --}}
+    {{-- ===================== PENDING TAB ===================== --}}
     <div class="sp-tab-pane active" id="tab-pending">
         <div class="sp-table-wrap">
-            <table class="sp-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        @if(auth()->user()->isAdmin())<th>User</th>@endif
-                        <th>Event</th>
-                        <th>Participant</th>
-                        <th>Contact</th>
-                        <th>Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($pending as $r)
-                    <tr>
-                        <td><span class="sp-id-badge">#{{ $r->id }}</span></td>
-                        @if(auth()->user()->isAdmin())
-                        <td>
-                            <div class="sp-user-badge">
-                                <div class="sp-user-avatar">{{ substr($r->user->username, 0, 1) }}</div>
-                                {{ $r->user->username }}
-                            </div>
-                        </td>
-                        @endif
-                        <td>
-                            <div class="sp-event-cell-name">{{ $r->event->event_name }}</div>
-                            <div class="sp-event-cell-date">{{ $r->event->event_date->format('M d, Y') }}</div>
-                        </td>
-                        <td>{{ $r->participant_name }}</td>
-                        <td style="color:#64748b">{{ $r->contact_number }}</td>
-                        <td style="color:#64748b">{{ $r->created_at->format('M d, Y') }}</td>
-                        <td>
-                            <div class="sp-action-wrap">
-                                @if(auth()->user()->isAdmin())
-                                    <form action="{{ route('registrations.approve', $r) }}" method="POST" class="d-inline">
-                                        @csrf @method('PATCH')
-                                        <button class="sp-btn-approve">✓ Approve</button>
-                                    </form>
-                                    <form action="{{ route('registrations.reject', $r) }}" method="POST" class="d-inline" onsubmit="return confirm('Reject this registration?')">
-                                        @csrf @method('PATCH')
-                                        <button class="sp-btn-reject">✗ Reject</button>
-                                    </form>
-                                @else
-                                    <form action="{{ route('registrations.cancel', $r) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancel your registration?')">
-                                        @csrf @method('PATCH')
-                                        <button class="sp-btn-cancel">Cancel</button>
-                                    </form>
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="{{ auth()->user()->isAdmin() ? 7 : 6 }}">
-                        <div class="sp-empty">
-                            <div class="sp-empty-text">No Pending Registrations</div>
+            @if($pendingBySport->isEmpty())
+                <div class="sp-empty">
+                    <i class="bi bi-hourglass sp-empty-icon"></i>
+                    <div class="sp-empty-text">No Pending Registrations</div>
+                </div>
+            @else
+                <table class="sp-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            @if(auth()->user()->isAdmin())<th>User</th>@endif
+                            <th>Event</th>
+                            <th>Participant</th>
+                            <th>Contact</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                </table>
+                @foreach($pendingBySport->sortKeys() as $sport => $registrations)
+                    <div class="sp-sport-divider">
+                        <div class="sp-sport-icon">
+                            <i class="bi {{ sportIcon($sport) }}"></i>
                         </div>
-                    </td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+                        <span class="sp-sport-label">{{ $sport }}</span>
+                        <span class="sp-sport-count">{{ $registrations->count() }} {{ Str::plural('registration', $registrations->count()) }}</span>
+                    </div>
+                    <table class="sp-table">
+                        <tbody>
+                            @foreach($registrations as $r)
+                            <tr>
+                                <td><span class="sp-id-badge">#{{ $r->id }}</span></td>
+                                @if(auth()->user()->isAdmin())
+                                <td>
+                                    <div class="sp-user-badge">
+                                        <div class="sp-user-avatar">{{ substr($r->user->username, 0, 1) }}</div>
+                                        {{ $r->user->username }}
+                                    </div>
+                                </td>
+                                @endif
+                                <td>
+                                    <div class="sp-event-cell-name">{{ $r->event->event_name }}</div>
+                                    <div class="sp-event-cell-date">{{ $r->event->event_date->format('M d, Y') }}</div>
+                                </td>
+                                <td>{{ $r->participant_name }}</td>
+                                <td style="color:#64748b">{{ $r->contact_number }}</td>
+                                <td style="color:#64748b">{{ $r->created_at->format('M d, Y') }}</td>
+                                <td>
+                                    <div class="sp-action-wrap">
+                                        @if(auth()->user()->isAdmin())
+                                            <form action="{{ route('registrations.approve', $r) }}" method="POST" class="d-inline">
+                                                @csrf @method('PATCH')
+                                                <button class="sp-btn-approve"><i class="bi bi-check-lg"></i> Approve</button>
+                                            </form>
+                                            <form action="{{ route('registrations.reject', $r) }}" method="POST" class="d-inline" onsubmit="return confirm('Reject this registration?')">
+                                                @csrf @method('PATCH')
+                                                <button class="sp-btn-reject"><i class="bi bi-x-lg"></i> Reject</button>
+                                            </form>
+                                        @else
+                                            <form action="{{ route('registrations.cancel', $r) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancel your registration?')">
+                                                @csrf @method('PATCH')
+                                                <button class="sp-btn-cancel">Cancel</button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endforeach
+            @endif
         </div>
     </div>
 
-    {{-- APPROVED TAB --}}
+    {{-- ===================== APPROVED TAB ===================== --}}
     <div class="sp-tab-pane" id="tab-approved">
         <div class="sp-table-wrap">
-            <table class="sp-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        @if(auth()->user()->isAdmin())<th>User</th>@endif
-                        <th>Event</th>
-                        <th>Participant</th>
-                        <th>Contact</th>
-                        <th>Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($approved as $r)
-                    <tr>
-                        <td><span class="sp-id-badge">#{{ $r->id }}</span></td>
-                        @if(auth()->user()->isAdmin())
-                        <td>
-                            <div class="sp-user-badge">
-                                <div class="sp-user-avatar">{{ substr($r->user->username, 0, 1) }}</div>
-                                {{ $r->user->username }}
-                            </div>
-                        </td>
-                        @endif
-                        <td>
-                            <div class="sp-event-cell-name">{{ $r->event->event_name }}</div>
-                            <div class="sp-event-cell-date">{{ $r->event->event_date->format('M d, Y') }}</div>
-                        </td>
-                        <td>{{ $r->participant_name }}</td>
-                        <td style="color:#64748b">{{ $r->contact_number }}</td>
-                        <td style="color:#64748b">{{ $r->created_at->format('M d, Y') }}</td>
-                        <td>
-                            <div class="sp-action-wrap">
-                                @if(auth()->user()->isAdmin())
-                                    <form action="{{ route('registrations.archive', $r) }}" method="POST" class="d-inline" onsubmit="return confirm('Archive this registration?')">
-                                        @csrf @method('PATCH')
-                                        <button class="sp-btn-archive">🗃 Archive</button>
-                                    </form>
-                                @else
-                                    <span class="sp-pill approved">Approved</span>
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="{{ auth()->user()->isAdmin() ? 7 : 6 }}">
-                        <div class="sp-empty">
-                            <div class="sp-empty-text">No Approved Registrations</div>
+            @if($approvedBySport->isEmpty())
+                <div class="sp-empty">
+                    <i class="bi bi-check-circle sp-empty-icon"></i>
+                    <div class="sp-empty-text">No Approved Registrations</div>
+                </div>
+            @else
+                <table class="sp-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            @if(auth()->user()->isAdmin())<th>User</th>@endif
+                            <th>Event</th>
+                            <th>Participant</th>
+                            <th>Contact</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                </table>
+                @foreach($approvedBySport->sortKeys() as $sport => $registrations)
+                    <div class="sp-sport-divider">
+                        <div class="sp-sport-icon">
+                            <i class="bi {{ sportIcon($sport) }}"></i>
                         </div>
-                    </td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+                        <span class="sp-sport-label">{{ $sport }}</span>
+                        <span class="sp-sport-count">{{ $registrations->count() }} {{ Str::plural('registration', $registrations->count()) }}</span>
+                    </div>
+                    <table class="sp-table">
+                        <tbody>
+                            @foreach($registrations as $r)
+                            <tr>
+                                <td><span class="sp-id-badge">#{{ $r->id }}</span></td>
+                                @if(auth()->user()->isAdmin())
+                                <td>
+                                    <div class="sp-user-badge">
+                                        <div class="sp-user-avatar">{{ substr($r->user->username, 0, 1) }}</div>
+                                        {{ $r->user->username }}
+                                    </div>
+                                </td>
+                                @endif
+                                <td>
+                                    <div class="sp-event-cell-name">{{ $r->event->event_name }}</div>
+                                    <div class="sp-event-cell-date">{{ $r->event->event_date->format('M d, Y') }}</div>
+                                </td>
+                                <td>{{ $r->participant_name }}</td>
+                                <td style="color:#64748b">{{ $r->contact_number }}</td>
+                                <td style="color:#64748b">{{ $r->created_at->format('M d, Y') }}</td>
+                                <td>
+                                    <div class="sp-action-wrap">
+                                        @if(auth()->user()->isAdmin())
+                                            <form action="{{ route('registrations.archive', $r) }}" method="POST" class="d-inline" onsubmit="return confirm('Archive this registration?')">
+                                                @csrf @method('PATCH')
+                                                <button class="sp-btn-archive"><i class="bi bi-archive"></i> Archive</button>
+                                            </form>
+                                        @else
+                                            <span class="sp-pill approved">Approved</span>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endforeach
+            @endif
         </div>
     </div>
 
-    {{-- CANCELLED TAB --}}
+    {{-- ===================== CANCELLED TAB ===================== --}}
     <div class="sp-tab-pane" id="tab-cancelled">
         <div class="sp-table-wrap">
-            <table class="sp-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        @if(auth()->user()->isAdmin())<th>User</th>@endif
-                        <th>Event</th>
-                        <th>Participant</th>
-                        <th>Contact</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($cancelled as $r)
-                    <tr>
-                        <td><span class="sp-id-badge">#{{ $r->id }}</span></td>
-                        @if(auth()->user()->isAdmin())
-                        <td>
-                            <div class="sp-user-badge">
-                                <div class="sp-user-avatar">{{ substr($r->user->username, 0, 1) }}</div>
-                                {{ $r->user->username }}
-                            </div>
-                        </td>
-                        @endif
-                        <td>
-                            <div class="sp-event-cell-name">{{ $r->event->event_name }}</div>
-                            <div class="sp-event-cell-date">{{ $r->event->event_date->format('M d, Y') }}</div>
-                        </td>
-                        <td>{{ $r->participant_name }}</td>
-                        <td style="color:#64748b">{{ $r->contact_number }}</td>
-                        <td style="color:#64748b">{{ $r->created_at->format('M d, Y') }}</td>
-                        <td><span class="sp-pill cancelled">Cancelled</span></td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="{{ auth()->user()->isAdmin() ? 7 : 6 }}">
-                        <div class="sp-empty">
-                            <div class="sp-empty-text">No Cancelled Registrations</div>
+            @if($cancelledBySport->isEmpty())
+                <div class="sp-empty">
+                    <i class="bi bi-slash-circle sp-empty-icon"></i>
+                    <div class="sp-empty-text">No Cancelled Registrations</div>
+                </div>
+            @else
+                <table class="sp-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            @if(auth()->user()->isAdmin())<th>User</th>@endif
+                            <th>Event</th>
+                            <th>Participant</th>
+                            <th>Contact</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                </table>
+                @foreach($cancelledBySport->sortKeys() as $sport => $registrations)
+                    <div class="sp-sport-divider">
+                        <div class="sp-sport-icon">
+                            <i class="bi {{ sportIcon($sport) }}"></i>
                         </div>
-                    </td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+                        <span class="sp-sport-label">{{ $sport }}</span>
+                        <span class="sp-sport-count">{{ $registrations->count() }} {{ Str::plural('registration', $registrations->count()) }}</span>
+                    </div>
+                    <table class="sp-table">
+                        <tbody>
+                            @foreach($registrations as $r)
+                            <tr>
+                                <td><span class="sp-id-badge">#{{ $r->id }}</span></td>
+                                @if(auth()->user()->isAdmin())
+                                <td>
+                                    <div class="sp-user-badge">
+                                        <div class="sp-user-avatar">{{ substr($r->user->username, 0, 1) }}</div>
+                                        {{ $r->user->username }}
+                                    </div>
+                                </td>
+                                @endif
+                                <td>
+                                    <div class="sp-event-cell-name">{{ $r->event->event_name }}</div>
+                                    <div class="sp-event-cell-date">{{ $r->event->event_date->format('M d, Y') }}</div>
+                                </td>
+                                <td>{{ $r->participant_name }}</td>
+                                <td style="color:#64748b">{{ $r->contact_number }}</td>
+                                <td style="color:#64748b">{{ $r->created_at->format('M d, Y') }}</td>
+                                <td><span class="sp-pill cancelled">Cancelled</span></td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endforeach
+            @endif
         </div>
     </div>
 
-    {{-- REJECTED TAB (non-admin only) --}}
+    {{-- ===================== REJECTED TAB (non-admin only) ===================== --}}
     @if(!auth()->user()->isAdmin())
     <div class="sp-tab-pane" id="tab-rejected">
         <div class="sp-table-wrap">
-            <table class="sp-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Event</th>
-                        <th>Participant</th>
-                        <th>Contact</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($rejected as $r)
-                    <tr>
-                        <td><span class="sp-id-badge">#{{ $r->id }}</span></td>
-                        <td>
-                            <div class="sp-event-cell-name">{{ $r->event->event_name }}</div>
-                            <div class="sp-event-cell-date">{{ $r->event->event_date->format('M d, Y') }}</div>
-                        </td>
-                        <td>{{ $r->participant_name }}</td>
-                        <td style="color:#64748b">{{ $r->contact_number }}</td>
-                        <td style="color:#64748b">{{ $r->created_at->format('M d, Y') }}</td>
-                        <td><span class="sp-pill rejected">Rejected</span></td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="6">
-                        <div class="sp-empty">
-                            <span class="sp-empty-icon">📭</span>
-                            <div class="sp-empty-text">No Rejected Registrations</div>
+            @if($rejectedBySport->isEmpty())
+                <div class="sp-empty">
+                    <i class="bi bi-x-circle sp-empty-icon"></i>
+                    <div class="sp-empty-text">No Rejected Registrations</div>
+                </div>
+            @else
+                <table class="sp-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Event</th>
+                            <th>Participant</th>
+                            <th>Contact</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                </table>
+                @foreach($rejectedBySport->sortKeys() as $sport => $registrations)
+                    <div class="sp-sport-divider">
+                        <div class="sp-sport-icon">
+                            <i class="bi {{ sportIcon($sport) }}"></i>
                         </div>
-                    </td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+                        <span class="sp-sport-label">{{ $sport }}</span>
+                        <span class="sp-sport-count">{{ $registrations->count() }} {{ Str::plural('registration', $registrations->count()) }}</span>
+                    </div>
+                    <table class="sp-table">
+                        <tbody>
+                            @foreach($registrations as $r)
+                            <tr>
+                                <td><span class="sp-id-badge">#{{ $r->id }}</span></td>
+                                <td>
+                                    <div class="sp-event-cell-name">{{ $r->event->event_name }}</div>
+                                    <div class="sp-event-cell-date">{{ $r->event->event_date->format('M d, Y') }}</div>
+                                </td>
+                                <td>{{ $r->participant_name }}</td>
+                                <td style="color:#64748b">{{ $r->contact_number }}</td>
+                                <td style="color:#64748b">{{ $r->created_at->format('M d, Y') }}</td>
+                                <td><span class="sp-pill rejected">Rejected</span></td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endforeach
+            @endif
         </div>
     </div>
     @endif
 
-    {{-- ARCHIVED TAB (admin only) --}}
+    {{-- ===================== ARCHIVED TAB (admin only) ===================== --}}
     @if(auth()->user()->isAdmin())
     <div class="sp-tab-pane" id="tab-archived">
         <div class="sp-table-wrap">
-            <table class="sp-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>User</th>
-                        <th>Event</th>
-                        <th>Participant</th>
-                        <th>Contact</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($archived as $r)
-                    <tr>
-                        <td><span class="sp-id-badge">#{{ $r->id }}</span></td>
-                        <td>
-                            <div class="sp-user-badge">
-                                <div class="sp-user-avatar">{{ substr($r->user->username, 0, 1) }}</div>
-                                {{ $r->user->username }}
-                            </div>
-                        </td>
-                        <td>
-                            <div class="sp-event-cell-name">{{ $r->event->event_name }}</div>
-                            <div class="sp-event-cell-date">{{ $r->event->event_date->format('M d, Y') }}</div>
-                        </td>
-                        <td>{{ $r->participant_name }}</td>
-                        <td style="color:#64748b">{{ $r->contact_number }}</td>
-                        <td style="color:#64748b">{{ $r->created_at->format('M d, Y') }}</td>
-                        <td>
-                            @if($r->status == 'rejected')
-                                <span class="sp-pill rejected">Rejected</span>
-                            @else
-                                <span class="sp-pill archived">Archived</span>
-                            @endif
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="7">
-                        <div class="sp-empty">
-                            <span class="sp-empty-icon">🗃️</span>
-                            <div class="sp-empty-text">No Archived Registrations</div>
+            @if($archivedBySport->isEmpty())
+                <div class="sp-empty">
+                    <i class="bi bi-archive sp-empty-icon"></i>
+                    <div class="sp-empty-text">No Archived Registrations</div>
+                </div>
+            @else
+                <table class="sp-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Event</th>
+                            <th>Participant</th>
+                            <th>Contact</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                </table>
+                @foreach($archivedBySport->sortKeys() as $sport => $registrations)
+                    <div class="sp-sport-divider">
+                        <div class="sp-sport-icon">
+                            <i class="bi {{ sportIcon($sport) }}"></i>
                         </div>
-                    </td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+                        <span class="sp-sport-label">{{ $sport }}</span>
+                        <span class="sp-sport-count">{{ $registrations->count() }} {{ Str::plural('registration', $registrations->count()) }}</span>
+                    </div>
+                    <table class="sp-table">
+                        <tbody>
+                            @foreach($registrations as $r)
+                            <tr>
+                                <td><span class="sp-id-badge">#{{ $r->id }}</span></td>
+                                <td>
+                                    <div class="sp-user-badge">
+                                        <div class="sp-user-avatar">{{ substr($r->user->username, 0, 1) }}</div>
+                                        {{ $r->user->username }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="sp-event-cell-name">{{ $r->event->event_name }}</div>
+                                    <div class="sp-event-cell-date">{{ $r->event->event_date->format('M d, Y') }}</div>
+                                </td>
+                                <td>{{ $r->participant_name }}</td>
+                                <td style="color:#64748b">{{ $r->contact_number }}</td>
+                                <td style="color:#64748b">{{ $r->created_at->format('M d, Y') }}</td>
+                                <td>
+                                    @if($r->status === 'rejected')
+                                        <span class="sp-pill rejected">Rejected</span>
+                                    @else
+                                        <span class="sp-pill archived">Archived</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endforeach
+            @endif
         </div>
     </div>
     @endif
